@@ -37,7 +37,6 @@ class Discriminator(nn.Module):
         assert x.dim() == 2 and x.size(1) == self.emb_dim
         return self.layers(x).view(-1)
 
-    
 def build_model(params, with_dis):
     """
     Build all components of the model.

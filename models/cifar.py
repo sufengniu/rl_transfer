@@ -49,9 +49,6 @@ def load_img_embeddings(params, source, full_vocab=False):
 
     # Data
     print('==> Preparing data..')
-    trainset = torchvision.datasets.CIFAR10(root='/scratch2/sniu/cifar10_data', train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
-
     test_batch = 100
     testset = torchvision.datasets.CIFAR10(root='/scratch2/sniu/cifar10_data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch, shuffle=False, num_workers=2)
@@ -89,22 +86,40 @@ def load_img_embeddings(params, source, full_vocab=False):
     embeddings = dictionary.view(-1, dictionary.shape[-1])
     return embeddings, dico
 
-# def get_sample_emb():
+def get_sample_emb(source=True):
 
-#     num_sample = 16
-#     trainset = torchvision.datasets.CIFAR10(root='/scratch2/sniu/cifar10_data', train=True, download=True, transform=transform_train)
-#     trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True, num_workers=2)
+    test_batch = 128
+    trainset = torchvision.datasets.CIFAR10(root='/scratch2/sniu/cifar10_data', train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=test_batch, shuffle=False, num_workers=2)
 
+    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
+    if source == True:
+        checkpoint = torch.load('./checkpoint/vgg.t7')
+    else:
+        checkpoint = torch.load('./checkpoint/resnet.t7')
+    net = checkpoint['net']
+    best_acc = checkpoint['acc']
+    start_epoch = checkpoint['epoch']
+
+    if source == True:
+        net = VGG('VGG19')
+    else:
+        net = ResNet18()
     
-#     for batch_idx, (inputs, targets) in enumerate(trainloader):
-#         if use_cuda:
-#             inputs, targets = inputs.cuda(), targets.cuda()
+    if use_cuda:
+        net.cuda()
 
-#         inputs, targets = Variable(inputs, volatile=True), Variable(targets)
-#         outputs, features = net(inputs)
+    dictionary = []
+    for batch_idx, (inputs, targets) in enumerate(trainloader):
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
 
-#         _, predicted = torch.max(outputs.data, 1)
-#         for i in range(test_batch):
-#             word2id[i+batch_idx*test_batch] = i+batch_idx*test_batch
+        inputs, targets = Variable(inputs, volatile=True), Variable(targets)
+        outputs, features = net(inputs)
 
-#         dictionary.append(features.data)
+        _, predicted = torch.max(outputs.data, 1)
+
+        dictionary.append(features.data)
+
+    embeddings = torch.cat(dictionary, dim=0)
+    return embeddings

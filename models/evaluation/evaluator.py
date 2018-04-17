@@ -15,7 +15,10 @@ from . import get_word_translation_accuracy
 from . import load_europarl_data, get_sent_translation_accuracy
 from ..dico_builder import get_candidates, build_dictionary
 from models.utils import get_idf
-# from models.cifar import get_sample_emb
+from models.cifar import get_sample_emb
+
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 logger = getLogger()
 
@@ -38,11 +41,11 @@ class Evaluator(object):
         """
         Evaluation on monolingual word similarity.
         """
-        src_ws_scores = get_wordsim_scores(
+        src_ws_scores = get_imgsim_scores(
             self.src_dico.lang, self.src_dico.word2id,
             self.mapping(self.src_emb.weight).data.cpu().numpy()
         )
-        tgt_ws_scores = get_wordsim_scores(
+        tgt_ws_scores = get_imgsim_scores(
             self.tgt_dico.lang, self.tgt_dico.word2id,
             self.tgt_emb.weight.data.cpu().numpy()
         ) if self.params.tgt_lang else None
@@ -195,14 +198,17 @@ class Evaluator(object):
         """
         Run all evaluations.
         """
-        self.monolingual_wordsim(to_log)
-        self.crosslingual_wordsim(to_log)
-        # self.img_translation(to_log)
+        self.img_translation(to_log)
         self.dist_mean_cosine(to_log)
 
-    # def img_translation(to_log):
-        
-    #     get_sample_emb(self.mapping)
+    def img_translation(self, to_log):
+
+        src_numpy = self.mapping(Variable(get_sample_emb(source=True))).data.cpu().numpy()
+        tgt_numpy = Variable(get_sample_emb(source=False)).data.cpu().numpy()
+        mean_cosine = cosine_similarity(src_numpy, tgt_numpy).mean()
+        logger.info("Mean cosine similarity on testing set): %.5f"
+                    % (mean_cosine))
+        # to_log['cos_sim_pairwise'] = mean_cosine
 
         
     def eval_dis(self, to_log):

@@ -195,7 +195,7 @@ def get_wordanalogy_scores(language, word2id, embeddings, lower):
 
 
 def get_crosslingual_wordsim_scores(lang1, word2id1, embeddings1,
-                                    lang2, word2id2, embeddings2, lower=True):
+                                   lang2, word2id2, embeddings2):
     """
     Return cross-lingual word similarity scores.
     """
